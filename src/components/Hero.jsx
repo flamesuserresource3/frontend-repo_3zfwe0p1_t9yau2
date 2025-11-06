@@ -2,15 +2,27 @@ import React from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Spline from '@splinetool/react-spline';
 import { Download, Mail, Rocket, Sun, Moon, MousePointer2 } from 'lucide-react';
+import HotspotOverlay from './HotspotOverlay';
 
 const Hero = () => {
-  const [dark, setDark] = React.useState(false);
+  // Theme persistence
+  const [dark, setDark] = React.useState(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+    if (stored) return stored === 'dark';
+    if (typeof window !== 'undefined') {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
 
   React.useEffect(() => {
+    const root = document.documentElement;
     if (dark) {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [dark]);
 
@@ -30,17 +42,12 @@ const Hero = () => {
     my.set(Math.max(-50, Math.min(50, y / 6)));
   };
 
-  // Make the "first keyboard" inside Spline clickable → smooth scroll to Skills
-  const handleSplineMouseDown = (e) => {
-    const name = e?.target?.name || '';
-    const possibleKeyboardNames = [
-      'Keyboard', 'keyboard', 'Keyboard 1', 'keyboard 1', 'KeyBoard', 'KB_1', 'Key_1', 'Piano Keyboard'
-    ];
-    if (possibleKeyboardNames.includes(name)) {
-      const el = document.querySelector('#skills') || document.querySelector('#about');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+  // Hotspots that link to sections (percent-based positions)
+  const hotspots = [
+    { id: 'hs-skills', label: 'S', x: 78, y: 42, href: '#skills' },
+    { id: 'hs-projects', label: 'P', x: 86, y: 62, href: '#projects' },
+    { id: 'hs-contact', label: 'C', x: 68, y: 75, href: '#contact' },
+  ];
 
   return (
     <section
@@ -49,7 +56,7 @@ const Hero = () => {
       onMouseMove={onMove}
     >
       {/* Animated gradient overlays - never block pointer events */}
-      <div className="pointer-events-none absolute inset-0">
+      <div className="pointer-events-none absolute inset-0 z-10">
         <motion.div
           aria-hidden
           initial={{ opacity: 0 }}
@@ -73,7 +80,7 @@ const Hero = () => {
       </div>
 
       {/* Top controls */}
-      <div className="absolute z-20 w-full px-6 pt-6 flex items-center justify-between">
+      <div className="absolute z-30 w-full px-6 pt-6 flex items-center justify-between">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="backdrop-blur-md bg-white/50 dark:bg-white/5 border border-white/30 dark:border-white/10 rounded-full px-4 py-2 shadow-lg">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Taha BENISSAOUIA</span>
         </motion.div>
@@ -83,17 +90,19 @@ const Hero = () => {
         </button>
       </div>
 
-      {/* 3D Spline scene */}
-      <div className="absolute right-0 top-0 h-full w-full sm:w-1/2 md:w-2/3 lg:w-1/2 opacity-90">
+      {/* 3D Spline scene as full-width cover background */}
+      <div className="absolute inset-0 z-0">
         <Spline
-          scene="https://prod.spline.design/VJLoxp84lCdVfdZu/scene.splinecode"
-          onMouseDown={handleSplineMouseDown}
+          scene="https://prod.spline.design/hqXbe5uy0NxM7CDI/scene.splinecode"
           style={{ width: '100%', height: '100%' }}
         />
       </div>
 
+      {/* Clickable hotspots overlayed on the Spline */}
+      <HotspotOverlay hotspots={hotspots} />
+
       {/* Copy block with parallax tilt */}
-      <div className="relative z-10 mx-auto flex min-h-[90vh] max-w-7xl items-center px-6">
+      <div className="relative z-20 mx-auto flex min-h-[90vh] max-w-7xl items-center px-6">
         <motion.div style={{ rotateX: rotX, rotateY: rotY, x: transX, y: transY }} className="max-w-2xl will-change-transform">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -145,7 +154,9 @@ const Hero = () => {
             </motion.a>
             <motion.a
               variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-              href="#" onClick={(e) => e.preventDefault()} className="group inline-flex items-center gap-2 rounded-xl border border-transparent bg-white/50 dark:bg-white/10 backdrop-blur px-6 py-3 text-slate-800 dark:text-slate-200 shadow-lg ring-1 ring-slate-200/60 dark:ring-white/10 hover:ring-[#FF6B00]/40"
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="group inline-flex items-center gap-2 rounded-xl border border-transparent bg-white/50 dark:bg-white/10 backdrop-blur px-6 py-3 text-slate-800 dark:text-slate-200 shadow-lg ring-1 ring-slate-200/60 dark:ring-white/10 hover:ring-[#FF6B00]/40"
             >
               <Download size={18} className="text-[#FF6B00] group-hover:animate-pulse" />
               Download CV
@@ -161,7 +172,7 @@ const Hero = () => {
             className="mt-10 inline-flex items-center gap-2 text-slate-500 dark:text-slate-400"
           >
             <MousePointer2 size={16} />
-            <span className="text-sm">Tip: Click the keyboard in the 3D scene</span>
+            <span className="text-sm">Hint: Hover the hotspots to navigate sections</span>
           </motion.div>
         </motion.div>
       </div>
