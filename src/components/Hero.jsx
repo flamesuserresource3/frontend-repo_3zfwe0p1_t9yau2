@@ -1,7 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Spline from '@splinetool/react-spline';
-import { Download, Mail, Rocket, Sun, Moon } from 'lucide-react';
+import { Download, Mail, Rocket, Sun, Moon, MousePointer2 } from 'lucide-react';
 
 const Hero = () => {
   const [dark, setDark] = React.useState(false);
@@ -14,10 +14,63 @@ const Hero = () => {
     }
   }, [dark]);
 
+  // Subtle parallax for the hero copy
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const rotX = useSpring(useTransform(my, [-50, 50], [8, -8]), { stiffness: 120, damping: 20 });
+  const rotY = useSpring(useTransform(mx, [-50, 50], [-8, 8]), { stiffness: 120, damping: 20 });
+  const transX = useSpring(useTransform(mx, [-50, 50], [-8, 8]), { stiffness: 120, damping: 20 });
+  const transY = useSpring(useTransform(my, [-50, 50], [-6, 6]), { stiffness: 120, damping: 20 });
+
+  const onMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - (rect.left + rect.width / 2);
+    const y = e.clientY - (rect.top + rect.height / 2);
+    mx.set(Math.max(-50, Math.min(50, x / 6)));
+    my.set(Math.max(-50, Math.min(50, y / 6)));
+  };
+
+  // Make the "first keyboard" inside Spline clickable → smooth scroll to Skills
+  const handleSplineMouseDown = (e) => {
+    const name = e?.target?.name || '';
+    const possibleKeyboardNames = [
+      'Keyboard', 'keyboard', 'Keyboard 1', 'keyboard 1', 'KeyBoard', 'KB_1', 'Key_1', 'Piano Keyboard'
+    ];
+    if (possibleKeyboardNames.includes(name)) {
+      const el = document.querySelector('#skills') || document.querySelector('#about');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <section id="home" className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
-      {/* Animated gradient overlay */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_20%_-20%,rgba(0,119,255,0.15),transparent),radial-gradient(800px_400px_at_80%_120%,rgba(255,107,0,0.12),transparent)]" />
+    <section
+      id="home"
+      className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900"
+      onMouseMove={onMove}
+    >
+      {/* Animated gradient overlays - never block pointer events */}
+      <div className="pointer-events-none absolute inset-0">
+        <motion.div
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2 }}
+          className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_20%_-20%,rgba(0,119,255,0.15),transparent),radial-gradient(800px_400px_at_80%_120%,rgba(255,107,0,0.12),transparent)]"
+        />
+        {/* Floating orbs */}
+        <motion.div
+          aria-hidden
+          className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-[#0077FF]/10 blur-3xl"
+          animate={{ y: [0, -20, 0], x: [0, 10, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          aria-hidden
+          className="absolute -right-24 bottom-10 h-72 w-72 rounded-full bg-[#FF6B00]/10 blur-3xl"
+          animate={{ y: [0, 16, 0], x: [0, -10, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      </div>
 
       {/* Top controls */}
       <div className="absolute z-20 w-full px-6 pt-6 flex items-center justify-between">
@@ -32,11 +85,16 @@ const Hero = () => {
 
       {/* 3D Spline scene */}
       <div className="absolute right-0 top-0 h-full w-full sm:w-1/2 md:w-2/3 lg:w-1/2 opacity-90">
-        <Spline scene="https://prod.spline.design/VJLoxp84lCdVfdZu/scene.splinecode" style={{ width: '100%', height: '100%' }} />
+        <Spline
+          scene="https://prod.spline.design/VJLoxp84lCdVfdZu/scene.splinecode"
+          onMouseDown={handleSplineMouseDown}
+          style={{ width: '100%', height: '100%' }}
+        />
       </div>
 
+      {/* Copy block with parallax tilt */}
       <div className="relative z-10 mx-auto flex min-h-[90vh] max-w-7xl items-center px-6">
-        <div className="max-w-2xl">
+        <motion.div style={{ rotateX: rotX, rotateY: rotY, x: transX, y: transY }} className="max-w-2xl will-change-transform">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -45,7 +103,7 @@ const Hero = () => {
           >
             <span className="block">Taha BENISSAOUIA</span>
             <motion.span
-              className="mt-3 block bg-gradient-to-r from-[#0077FF] to-[#FF6B00] bg-clip-text text-transparent"
+              className="mt-3 inline-block bg-gradient-to-r from-[#0077FF] to-[#FF6B00] bg-clip-text text-transparent"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.8 }}
@@ -93,7 +151,19 @@ const Hero = () => {
               Download CV
             </motion.a>
           </motion.div>
-        </div>
+
+          {/* Scroll cue */}
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="mt-10 inline-flex items-center gap-2 text-slate-500 dark:text-slate-400"
+          >
+            <MousePointer2 size={16} />
+            <span className="text-sm">Tip: Click the keyboard in the 3D scene</span>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
